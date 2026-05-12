@@ -92,7 +92,6 @@ def show_login_screen(win, show_main_callback):
     login_card = Frame(main_frame, bg="white", bd=0, relief=FLAT)
     login_card.pack(pady=30, padx=40, fill="both", expand=True)
 
-    
     content_frame = Frame(login_card, bg="white")
     content_frame.pack(padx=30, pady=30, fill="both", expand=True)
 
@@ -194,20 +193,26 @@ def show_login_screen(win, show_main_callback):
     def create_login_form():
         for widget in content_frame.winfo_children():
             widget.destroy()
+
         Label(content_frame, text="Username", font=('Arial', 11, 'bold'),
               bg="white", fg=TEXT_DARK).pack(anchor="w", pady=(0, 8))
+
         username_entry = Entry(content_frame, font=('Arial', 11),
                                bd=1, relief=SOLID, bg=BG_LIGHT, fg=TEXT_DARK)
+
         username_entry.pack(fill="x", pady=(0, 15), ipady=10)
 
         Label(content_frame, text="Password", font=('Arial', 11, 'bold'),
               bg="white", fg=TEXT_DARK).pack(anchor="w", pady=(0, 8))
+
         password_entry = Entry(content_frame, font=('Arial', 11),
                                show="•", bd=1, relief=SOLID, bg=BG_LIGHT, fg=TEXT_DARK)
+
         password_entry.pack(fill="x", pady=(0, 20), ipady=10)
 
         error_label = Label(content_frame, text="", fg=ACCENT_COLOR,
                             bg="white", font=('Arial', 9, 'bold'))
+
         error_label.pack(pady=(0, 10))
 
         def do_login():
@@ -263,7 +268,9 @@ class Database:
     def get_all(self):
         self.cursor.execute("SELECT id, name, program, year FROM students ORDER BY id")
         rows = self.cursor.fetchall()
+
         students = []
+
         for row in rows:
             students.append({
                 'id': row[0],
@@ -271,11 +278,17 @@ class Database:
                 'program': row[2],
                 'year': str(row[3])
             })
+
         return students
 
     def get(self, student_id):
-        self.cursor.execute("SELECT id, name, program, year FROM students WHERE id = ?", (student_id,))
+        self.cursor.execute(
+            "SELECT id, name, program, year FROM students WHERE id = ?",
+            (student_id,)
+        )
+
         row = self.cursor.fetchone()
+
         if row:
             return {
                 'id': row[0],
@@ -283,6 +296,7 @@ class Database:
                 'program': row[2],
                 'year': str(row[3])
             }
+
         return None
 
     def update(self, student_id, new_data):
@@ -293,76 +307,193 @@ class Database:
             )
             self.conn.commit()
             return self.cursor.rowcount > 0
+
         except sqlite3.Error as e:
             print(f"Error updating student: {e}")
             return False
 
     def delete(self, student_id):
         try:
-            self.cursor.execute("DELETE FROM students WHERE id = ?", (student_id,))
+            self.cursor.execute(
+                "DELETE FROM students WHERE id = ?",
+                (student_id,)
+            )
+
             self.conn.commit()
             return self.cursor.rowcount > 0
+
         except sqlite3.Error as e:
             print(f"Error deleting student: {e}")
             return False
 
 
+# STACK DATA STRUCTURE
 class Stack:
     def __init__(self):
         self.items = []
 
-    def push(self, op): self.items.append(op)
+    def push(self, op):
+        self.items.append(op)
 
-    def pop(self): return self.items.pop() if self.items else None
+    def pop(self):
+        return self.items.pop() if self.items else None
 
-    def is_empty(self): return len(self.items) == 0
+    def is_empty(self):
+        return len(self.items) == 0
 
 
+# QUEUE DATA STRUCTURE
 class Queue:
     def __init__(self):
         self.items = []
 
-    def enqueue(self, sid): self.items.append(sid)
+    def enqueue(self, sid):
+        self.items.append(sid)
 
-    def dequeue(self): return self.items.pop(0) if self.items else None
+    def dequeue(self):
+        return self.items.pop(0) if self.items else None
 
-    def is_empty(self): return len(self.items) == 0
+    def is_empty(self):
+        return len(self.items) == 0
 
 
-db, stack, queue = Database(conn, cursor), Stack(), Queue()
+# LINKED LIST DATA STRUCTURE
+class Node:
+    def __init__(self, student):
+        self.student = student
+        self.next = None
+
+
+class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def append(self, student):
+        new_node = Node(student)
+
+        if not self.head:
+            self.head = new_node
+            return
+
+        current = self.head
+
+        while current.next:
+            current = current.next
+
+        current.next = new_node
+
+    def display(self):
+        students = []
+        current = self.head
+
+        while current:
+            students.append(current.student)
+            current = current.next
+
+        return students
+
+    def search(self, student_id):
+        current = self.head
+
+        while current:
+            if current.student['id'] == student_id:
+                return current.student
+
+            current = current.next
+
+        return None
+
+    def delete(self, student_id):
+        current = self.head
+        prev = None
+
+        while current:
+            if current.student['id'] == student_id:
+
+                if prev:
+                    prev.next = current.next
+                else:
+                    self.head = current.next
+
+                return True
+
+            prev = current
+            current = current.next
+
+        return False
+
+
+db = Database(conn, cursor)
+stack = Stack()
+queue = Queue()
+linked_list = LinkedList()
+
+# Load existing students into linked list
+for student in db.get_all():
+    linked_list.append(student)
+
 updating = None
 
 
 def refresh():
     listbox.delete(0, END)
+
     for idx, student in enumerate(db.get_all()):
-        # Alternate row colors for better readability
         display_text = f"{student['id']:^10} | {student['name']:^20} | {student['program']:^15} | Year {student['year']}"
         listbox.insert(END, display_text)
 
 
 def add_update():
     global updating
-    student_id, name, program, year = id_e.get(), name_e.get(), prog_e.get(), year_e.get()
+
+    student_id = id_e.get()
+    name = name_e.get()
+    program = prog_e.get()
+    year = year_e.get()
+
     if not (student_id and name and program and year):
         messagebox.showerror("Error", "❌ All fields required!")
         return
 
-    student = {"id": student_id, "name": name, "program": program, "year": year}
+    student = {
+        "id": student_id,
+        "name": name,
+        "program": program,
+        "year": year
+    }
 
     if updating:
         old_student = db.get(updating)
-        stack.push({'type': 'UPDATE', 'old': old_student, 'id': updating})
+
+        stack.push({
+            'type': 'UPDATE',
+            'old': old_student,
+            'id': updating
+        })
+
         db.update(updating, student)
+
+        linked_list.delete(updating)
+        linked_list.append(student)
+
         messagebox.showinfo("Success", "✅ Student updated successfully!")
+
         updating = None
         add_btn.config(text="ADD", bg=SUCCESS_COLOR)
+
     else:
         if db.get(student_id):
             messagebox.showerror("Error", "❌ ID already exists!")
             return
-        stack.push({'type': 'ADD', 'student': student})
+
+        stack.push({
+            'type': 'ADD',
+            'student': student
+        })
+
         db.add(student)
+        linked_list.append(student)
+
         messagebox.showinfo("Success", "✅ Student added successfully!")
 
     refresh()
@@ -370,14 +501,18 @@ def add_update():
 
 
 def search():
-    student = db.get(id_e.get())
+    student = linked_list.search(id_e.get())
+
     if student:
         clear()
+
         id_e.insert(0, student['id'])
         name_e.insert(0, student['name'])
         prog_e.insert(0, student['program'])
         year_e.insert(0, student['year'])
+
         messagebox.showinfo("Found", "✅ Student found!")
+
     else:
         messagebox.showerror("Error", "❌ Student not found!")
 
@@ -386,14 +521,19 @@ def select_update():
     try:
         selected_index = listbox.curselection()[0]
         student = db.get_all()[selected_index]
+
         global updating
         updating = student['id']
+
         clear()
+
         id_e.insert(0, student['id'])
         name_e.insert(0, student['name'])
         prog_e.insert(0, student['program'])
         year_e.insert(0, student['year'])
+
         add_btn.config(text="UPDATE", bg=WARNING_COLOR)
+
     except:
         messagebox.showerror("Error", "❌ Please select a student!")
 
@@ -402,13 +542,24 @@ def delete():
     try:
         selected_index = listbox.curselection()[0]
         student = db.get_all()[selected_index]
+
         if messagebox.askyesno("Confirm", f"Delete {student['name']}?"):
-            stack.push({'type': 'DELETE', 'student': student})
+
+            stack.push({
+                'type': 'DELETE',
+                'student': student
+            })
+
             db.delete(student['id'])
+            linked_list.delete(student['id'])
+
             if updating == student['id']:
                 cancel()
+
             refresh()
+
             messagebox.showinfo("Success", "✅ Student deleted successfully!")
+
     except:
         messagebox.showerror("Error", "❌ Please select a student!")
 
@@ -417,13 +568,23 @@ def undo():
     if stack.is_empty():
         messagebox.showinfo("Undo", "ℹ️ Nothing to undo!")
         return
+
     operation = stack.pop()
+
     if operation['type'] == 'ADD':
         db.delete(operation['student']['id'])
+        linked_list.delete(operation['student']['id'])
+
     elif operation['type'] == 'DELETE':
         db.add(operation['student'])
+        linked_list.append(operation['student'])
+
     elif operation['type'] == 'UPDATE':
         db.update(operation['id'], operation['old'])
+
+        linked_list.delete(operation['id'])
+        linked_list.append(operation['old'])
+
     refresh()
     messagebox.showinfo("Undo", "✅ Action undone!")
 
@@ -432,8 +593,11 @@ def add_queue():
     try:
         selected_index = listbox.curselection()[0]
         student = db.get_all()[selected_index]
+
         queue.enqueue(student['id'])
+
         messagebox.showinfo("Queue", f"✅ {student['name']} added to queue!")
+
     except:
         messagebox.showerror("Error", "❌ Please select a student!")
 
@@ -442,10 +606,13 @@ def process_queue():
     if queue.is_empty():
         messagebox.showinfo("Queue", "ℹ️ Queue is empty!")
         return
+
     student_id = queue.dequeue()
     student = db.get(student_id)
+
     if student:
         messagebox.showinfo("Processing", f"📋 Processing: {student['name']}")
+
     else:
         messagebox.showwarning("Warning", "⚠️ Student not found!")
 
@@ -454,12 +621,38 @@ def show_queue():
     if queue.is_empty():
         messagebox.showinfo("Queue", "ℹ️ Queue is empty!")
         return
+
     message_text = "📋 REGISTRATION QUEUE:\n" + "=" * 40 + "\n"
+
     for position, student_id in enumerate(queue.items, 1):
         student = db.get(student_id)
+
         if student:
             message_text += f"{position}. {student['name']} (ID: {student_id})\n"
+
     messagebox.showinfo("Queue", message_text)
+
+
+# LINKED LIST DISPLAY
+def show_linked_list():
+    students = linked_list.display()
+
+    if not students:
+        messagebox.showinfo("Linked List", "ℹ️ Linked List is empty!")
+        return
+
+    message_text = "🔗 LINKED LIST CONTENTS\n"
+    message_text += "=" * 40 + "\n"
+
+    for student in students:
+        message_text += (
+            f"{student['id']} | "
+            f"{student['name']} | "
+            f"{student['program']} | "
+            f"Year {student['year']}\n"
+        )
+
+    messagebox.showinfo("Linked List", message_text)
 
 
 def clear():
@@ -471,8 +664,10 @@ def clear():
 
 def cancel():
     global updating
+
     updating = None
     clear()
+
     add_btn.config(text="ADD", bg=SUCCESS_COLOR)
 
 
@@ -485,7 +680,6 @@ def show_main_app(win):
     win.resizable(True, True)
 
     global id_e, name_e, prog_e, year_e, add_btn, listbox
-
 
     user_frame = Frame(win, bg=PRIMARY_COLOR, height=60)
     user_frame.pack(fill=X, padx=0, pady=0)
@@ -500,47 +694,57 @@ def show_main_app(win):
     Button(user_frame, text="🚪 Logout", command=logout, bg=ACCENT_COLOR, fg="white",
            font=('Arial', 9, 'bold'), padx=15, pady=8, bd=0, cursor="hand2").pack(side=RIGHT, padx=15, pady=10)
 
-
     title_frame = Frame(win, bg=BG_LIGHT)
     title_frame.pack(fill=X, padx=0, pady=10)
+
     Label(title_frame, text='📚 STUDENT RECORD SYSTEM', font=('Arial', 16, 'bold'),
           bg=BG_LIGHT, fg=TEXT_DARK).pack()
 
-
     input_card = LabelFrame(win, text=" STUDENT INFORMATION ", font=('Arial', 10, 'bold'),
                             bg=BG_LIGHT, fg=TEXT_DARK, padx=15, pady=15)
-    input_card.pack(padx=15, pady=10, fill="x")
 
+    input_card.pack(padx=15, pady=10, fill="x")
 
     left_frame = Frame(input_card, bg=BG_LIGHT)
     left_frame.pack(side=LEFT, padx=10)
 
-    Label(left_frame, text='ID:', font=('Arial', 10, 'bold'), bg=BG_LIGHT, fg=TEXT_DARK).pack(anchor="w", pady=(0, 5))
-    id_e = Entry(left_frame, font=('Arial', 10), bd=1, relief=SOLID, bg="white", width=20)
+    Label(left_frame, text='ID:', font=('Arial', 10, 'bold'),
+          bg=BG_LIGHT, fg=TEXT_DARK).pack(anchor="w", pady=(0, 5))
+
+    id_e = Entry(left_frame, font=('Arial', 10),
+                 bd=1, relief=SOLID, bg="white", width=20)
+
     id_e.pack(fill="x", pady=(0, 15))
 
-    Label(left_frame, text='Program:', font=('Arial', 10, 'bold'), bg=BG_LIGHT, fg=TEXT_DARK).pack(anchor="w",
-                                                                                                   pady=(0, 5))
-    prog_e = Entry(left_frame, font=('Arial', 10), bd=1, relief=SOLID, bg="white", width=20)
+    Label(left_frame, text='Program:', font=('Arial', 10, 'bold'),
+          bg=BG_LIGHT, fg=TEXT_DARK).pack(anchor="w", pady=(0, 5))
+
+    prog_e = Entry(left_frame, font=('Arial', 10),
+                   bd=1, relief=SOLID, bg="white", width=20)
+
     prog_e.pack(fill="x", pady=(0, 15))
 
     right_frame = Frame(input_card, bg=BG_LIGHT)
     right_frame.pack(side=LEFT, padx=10)
 
-    Label(right_frame, text='Name:', font=('Arial', 10, 'bold'), bg=BG_LIGHT, fg=TEXT_DARK).pack(anchor="w",
-                                                                                                 pady=(0, 5))
-    name_e = Entry(right_frame, font=('Arial', 10), bd=1, relief=SOLID, bg="white", width=20)
+    Label(right_frame, text='Name:', font=('Arial', 10, 'bold'),
+          bg=BG_LIGHT, fg=TEXT_DARK).pack(anchor="w", pady=(0, 5))
+
+    name_e = Entry(right_frame, font=('Arial', 10),
+                   bd=1, relief=SOLID, bg="white", width=20)
+
     name_e.pack(fill="x", pady=(0, 15))
 
-    Label(right_frame, text='Year:', font=('Arial', 10, 'bold'), bg=BG_LIGHT, fg=TEXT_DARK).pack(anchor="w",
-                                                                                                 pady=(0, 5))
-    year_e = Entry(right_frame, font=('Arial', 10), bd=1, relief=SOLID, bg="white", width=20)
-    year_e.pack(fill="x", pady=(0, 15))
+    Label(right_frame, text='Year:', font=('Arial', 10, 'bold'),
+          bg=BG_LIGHT, fg=TEXT_DARK).pack(anchor="w", pady=(0, 5))
 
+    year_e = Entry(right_frame, font=('Arial', 10),
+                   bd=1, relief=SOLID, bg="white", width=20)
+
+    year_e.pack(fill="x", pady=(0, 15))
 
     button_frame = Frame(win, bg="white")
     button_frame.pack(padx=15, pady=10, fill="x")
-
 
     Label(button_frame, text="DATA OPERATIONS", font=('Arial', 9, 'bold'),
           bg="white", fg=TEXT_DARK).pack(anchor="w", padx=5, pady=(5, 10))
@@ -550,6 +754,7 @@ def show_main_app(win):
 
     add_btn = Button(row1, text="➕ ADD", command=add_update, bg=SUCCESS_COLOR, fg="white",
                      font=('Arial', 10, 'bold'), padx=15, pady=8, bd=0, cursor="hand2", width=12)
+
     add_btn.pack(side=LEFT, padx=5)
 
     Button(row1, text="✏️ UPDATE", command=select_update, bg=WARNING_COLOR, fg="white",
@@ -560,7 +765,6 @@ def show_main_app(win):
 
     Button(row1, text="🔍 SEARCH", command=search, bg=SECONDARY_COLOR, fg="white",
            font=('Arial', 10, 'bold'), padx=15, pady=8, bd=0, cursor="hand2", width=12).pack(side=LEFT, padx=5)
-
 
     Label(button_frame, text="UTILITIES", font=('Arial', 9, 'bold'),
           bg="white", fg=TEXT_DARK).pack(anchor="w", padx=5, pady=(15, 10))
@@ -577,7 +781,6 @@ def show_main_app(win):
     Button(row2, text="❌ CANCEL", command=cancel, bg="#7f8c8d", fg="white",
            font=('Arial', 10, 'bold'), padx=15, pady=8, bd=0, cursor="hand2", width=12).pack(side=LEFT, padx=5)
 
-
     Label(button_frame, text="QUEUE MANAGEMENT", font=('Arial', 9, 'bold'),
           bg="white", fg=TEXT_DARK).pack(anchor="w", padx=5, pady=(15, 10))
 
@@ -593,19 +796,26 @@ def show_main_app(win):
     Button(row3, text="📋 SHOW Q", command=show_queue, bg="#5E35B1", fg="white",
            font=('Arial', 10, 'bold'), padx=15, pady=8, bd=0, cursor="hand2", width=12).pack(side=LEFT, padx=5)
 
+    # LINKED LIST BUTTON
+    Button(row3, text="🔗 SHOW LL", command=show_linked_list,
+           bg="#6C5CE7", fg="white",
+           font=('Arial', 10, 'bold'),
+           padx=15, pady=8, bd=0,
+           cursor="hand2", width=12).pack(side=LEFT, padx=5)
 
     db_card = LabelFrame(win, text=" STUDENTS DATABASE ", font=('Arial', 10, 'bold'),
                          bg="white", fg=TEXT_DARK, padx=10, pady=10)
-    db_card.pack(padx=15, pady=10, fill="both", expand=True)
 
+    db_card.pack(padx=15, pady=10, fill="both", expand=True)
 
     listbox = Listbox(db_card, height=12, font=('Courier', 9), bg="white", fg=TEXT_DARK,
                       selectmode=SINGLE, relief=SOLID, bd=1)
-    listbox.pack(fill="both", expand=True, padx=5, pady=5)
 
+    listbox.pack(fill="both", expand=True, padx=5, pady=5)
 
     scrollbar = Scrollbar(db_card, command=listbox.yview)
     scrollbar.pack(side=RIGHT, fill=Y, padx=(0, 5), pady=5)
+
     listbox.config(yscrollcommand=scrollbar.set)
 
     refresh()
